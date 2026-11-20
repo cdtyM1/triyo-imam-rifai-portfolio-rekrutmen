@@ -1,0 +1,5 @@
+# Repo template portofolio static (HTML/CSS/JS)
+# Tidak ada dependensi npm.
+
+.DS_Store
+node_modules
