@@ -29,6 +29,7 @@
   let trapFocusListener = null;
 
   const setModalOpen = (open) => {
+    if (!modal) return;
     const isOpen = open === true;
 
     modal.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
