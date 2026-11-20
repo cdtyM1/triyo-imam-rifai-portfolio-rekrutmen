@@ -2,15 +2,14 @@
 (function () {
   'use strict';
 
-  const $ = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const $ = (sel, root = document) => (root || document).querySelector(sel);
+  const $$ = (sel, root = document) => Array.from((root || document).querySelectorAll(sel));
 
   const yearEl = $('#year');
   if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 
   const worksGrid = $('#worksGrid');
   const modal = $('#workModal');
-  const modalOverlay = $('[data-close-modal]', modal);
   const closeBtns = $$('[data-close-modal]', modal);
 
   const modalCategory = $('#modalCategory');
@@ -38,9 +37,14 @@
     if (isOpen) {
       lastActiveEl = document.activeElement;
 
-      const closeBtn = closeBtns[0];
-      if (closeBtn && typeof closeBtn.focus === 'function') {
-        requestAnimationFrame(() => closeBtn.focus());
+      const focusables = getFocusable();
+      const initial = focusables[0];
+      if (initial && typeof initial.focus === 'function') {
+        requestAnimationFrame(() => initial.focus());
+      } else {
+        // Fallback: fokus tombol/elemen close bila ada
+        const closeBtn = closeBtns.find((el) => el && typeof el.focus === 'function');
+        if (closeBtn) requestAnimationFrame(() => closeBtn.focus());
       }
 
       if (!trapFocusListener) {
@@ -75,6 +79,7 @@
   };
 
   document.addEventListener('keydown', (e) => {
+    if (!modal) return;
     if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') {
       setModalOpen(false);
     }
