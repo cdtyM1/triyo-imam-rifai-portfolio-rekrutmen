@@ -21,14 +21,64 @@
   const modalHighlights = $('#modalHighlights');
   const modalCta = $('#modalCta');
 
+  let lastActiveEl = null;
+
+  const focusableSelector = 'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])';
+
+  const getFocusable = () => $$(focusableSelector, modal).filter((el) => !el.hasAttribute('disabled'));
+
+  let trapFocusListener = null;
+
   const setModalOpen = (open) => {
-    modal.setAttribute('aria-hidden', open ? 'false' : 'true');
-    document.body.style.overflow = open ? 'hidden' : '';
+    const isOpen = open === true;
+
+    modal.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+
+    if (isOpen) {
+      lastActiveEl = document.activeElement;
+
+      const closeBtn = closeBtns[0];
+      if (closeBtn && typeof closeBtn.focus === 'function') {
+        requestAnimationFrame(() => closeBtn.focus());
+      }
+
+      if (!trapFocusListener) {
+        trapFocusListener = (e) => {
+          if (e.key !== 'Tab') return;
+
+          const focusables = getFocusable();
+          if (!focusables.length) return;
+
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          const active = document.activeElement;
+
+          if (e.shiftKey && active === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && active === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        };
+      }
+
+      modal.addEventListener('keydown', trapFocusListener);
+    } else {
+      modal.removeEventListener('keydown', trapFocusListener);
+
+      if (lastActiveEl && typeof lastActiveEl.focus === 'function') {
+        lastActiveEl.focus();
+      }
+    }
   };
 
-  const escClose = (e) => {
-    if (e.key === 'Escape') setModalOpen(false);
-  };
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') {
+      setModalOpen(false);
+    }
+  });
 
   const renderWorks = (works) => {
     if (!worksGrid) return;
@@ -41,11 +91,19 @@
 
       const cat = document.createElement('div');
       cat.className = 'work-card__meta';
-      cat.innerHTML = `<span class="work-card__cat">${escapeHtml(w.category)}</span>`;
+
+      const catSpan = document.createElement('span');
+      catSpan.className = 'work-card__cat';
+      catSpan.textContent = w.category;
+      cat.appendChild(catSpan);
 
       const thumb = document.createElement('div');
       thumb.className = 'work-card__thumb';
-      thumb.innerHTML = `<img src="${w.image}" alt="Thumbnail ${escapeAttr(w.title)}" />`;
+
+      const img = document.createElement('img');
+      img.src = w.image;
+      img.alt = `Thumbnail ${w.title}`;
+      thumb.appendChild(img);
 
       const title = document.createElement('h3');
       title.className = 'work-card__title';
@@ -103,21 +161,12 @@
     modalCta.href = '#contact';
 
     setModalOpen(true);
-    document.addEventListener('keydown', escClose, { once: true });
   };
 
   if (modal) {
     closeBtns.forEach((b) => b.addEventListener('click', () => setModalOpen(false)));
   }
 
-  const escapeHtml = (str) => String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-
-  const escapeAttr = (str) => escapeHtml(str);
 
   renderWorks(window.WORKS || []);
 })();
